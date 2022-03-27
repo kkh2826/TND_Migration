@@ -1,6 +1,10 @@
 # TND_Migration
 
-### 로컬 Setting
+### 로컬 Setting1
+1. 해당 프로젝트 코드를 관리할 폴더 위치
+    - git clone 해당 프로젝트 주소
+
+### 로컬 Setting2
 1. 가상환경 생성 (manage.py와 같은 Directory에 생성)
     - python -m venv venv 
 2. 가상환경 실행
