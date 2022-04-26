@@ -1,6 +1,7 @@
 # Create your views here.
 import pymssql
 import psycopg2
+import psycopg2.extras
 import pandas
 from rest_framework.views import APIView
 from django.http import JsonResponse
@@ -11,41 +12,50 @@ from FACTORY.query import GetDBBasicInfoDataQuery, GetSampeDataQuery, GetColumnI
     DB 연결 객체
 '''
 class DBInfo:
-    def __init__(self, server, port, username, password, database):
+    def __init__(self, dbms, server, port, username, password, database):
+        self.dbms = dbms
         self.server = server
         self.port = port
         self.username = username
         self.password = password
         self.database = database
 
-
 '''
-    MSSQL 클래스
+    DBMS 클래스
 '''
-class MSSQL:
-    def __init__(self, server, port, username, password, database):
+class DBMS:
+    def __init__(self, dbms, server, port, username, password, database):
         self.server = server
         self.port = port
         self.username = username
         self.password = password
         self.database = database
+        self.dbms = dbms
 
     def Connect(self):
+        dbms = self.dbms
+
         try:
-            self.conn = pymssql.connect(server=self.server, port=self.port, user=self.username, password=self.password, database=self.database)
+            if dbms.upper() == 'MSSQL':
+                self.conn = pymssql.connect(server=self.server, port=self.port, user=self.username, password=self.password, database=self.database)
+            elif dbms.upper() == 'POSTGRESQL':
+                self.conn = psycopg2.connect(host=self.server, port=self.port, user=self.username, password=self.password, dbname=self.database)
         except:
             return None
 
         return self.conn
 
     def ExecuteQuery(self, query):
-
         cursor = None
+        dbms = self.dbms
 
         connectionObject = self.Connect()
 
         try:
-            cursor = connectionObject.cursor(as_dict=True)
+            if dbms.upper() == 'MSSQL':
+                cursor = connectionObject.cursor(as_dict=True)
+            elif dbms.upper() == 'POSTGRESQL':
+                cursor = connectionObject.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cursor.execute(query)
         except:
             return None
@@ -54,48 +64,30 @@ class MSSQL:
 
         return data
 
-class POSTGRESQL:
-    def __init__(self, server, port, username, password, database):
-        self.server = server
-        self.port = port
-        self.username = username
-        self.password = password
-        self.database = database
-
-    def Connect(self):
-        try:
-            self.conn = psycopg2.connect(host=self.server, port=self.port, user=self.username, password=self.password, dbname=self.database)
-        except:
-            return None
-
-        return self.conn
 
 def GetDBInfo(self):
+    dbms = self.data['dbms']
     server = self.data['server']
     port = self.data['port']
     username = self.data['username']
     password = self.data['password']
     database = self.data['database']
 
-    dbInfo = DBInfo(server, port, username, password, database)
+    dbInfo = DBInfo(dbms, server, port, username, password, database)
 
     return dbInfo
 
 
 class TNDDBConnection(APIView):
 
-    def get(self, request, dbms):
+    def get(self, request):
         result = {}
         connectionObject = None
 
         dbInfo = GetDBInfo(request)
 
-        if dbms.upper() == 'MSSQL':
-            dbmsObj = MSSQL(dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
-            connectionObject = dbmsObj.Connect()
-        elif dbms.upper() == 'POSTGRESQL':
-            dbmsObj = POSTGRESQL(dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
-            connectionObject = dbmsObj.Connect()
+        dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
+        connectionObject = dbmsObj.Connect()
 
         connectionSuccess = True if connectionObject is not None else False
         message = 'DB 연결 성공' if connectionObject is not None else 'DB 연결 실패'
@@ -123,7 +115,7 @@ class TNDDBInfo(APIView):
         query = GetDBBasicInfoDataQuery()
 
         try:
-            dbmsObj = MSSQL(dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
+            dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
             datas = dbmsObj.ExecuteQuery(query)
         except:
             result['QueryState'] = False
@@ -155,7 +147,7 @@ class TNDDBTableData(APIView):
         
         dbInfo = GetDBInfo(request)
 
-        dbmsObj = MSSQL(dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
+        dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
         connectionObject = dbmsObj.Connect()
 
         schema = request.data['schema']
@@ -187,8 +179,6 @@ class TNDColumnInfo(APIView):
             'Message': ''
         }
 
-        # columnInfo = dict.fromkeys(['COLUMN_ID', 'COLUMN_NAME', 'COLUMN_NO', 'COL_TYPE', 'NULL_YN', 'PK', 'FK', 'UQ', 'referenced_object', 'referenced_column_name'])
-
         dbInfo = GetDBInfo(request)
 
         schema = request.data['schema']
@@ -198,7 +188,7 @@ class TNDColumnInfo(APIView):
 
 
         try:
-            dbmsObj = MSSQL(dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
+            dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
             datas = dbmsObj.ExecuteQuery(query)
         except:
             result['QueryState'] = False
