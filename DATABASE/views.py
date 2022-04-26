@@ -1,5 +1,6 @@
 # Create your views here.
 import pymssql
+import psycopg2
 import pandas
 from rest_framework.views import APIView
 from django.http import JsonResponse
@@ -53,6 +54,22 @@ class MSSQL:
 
         return data
 
+class POSTGRESQL:
+    def __init__(self, server, port, username, password, database):
+        self.server = server
+        self.port = port
+        self.username = username
+        self.password = password
+        self.database = database
+
+    def Connect(self):
+        try:
+            self.conn = psycopg2.connect(host=self.server, port=self.port, user=self.username, password=self.password, dbname=self.database)
+        except:
+            return None
+
+        return self.conn
+
 def GetDBInfo(self):
     server = self.data['server']
     port = self.data['port']
@@ -75,6 +92,9 @@ class TNDDBConnection(APIView):
 
         if dbms.upper() == 'MSSQL':
             dbmsObj = MSSQL(dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
+            connectionObject = dbmsObj.Connect()
+        elif dbms.upper() == 'POSTGRESQL':
+            dbmsObj = POSTGRESQL(dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
             connectionObject = dbmsObj.Connect()
 
         connectionSuccess = True if connectionObject is not None else False
