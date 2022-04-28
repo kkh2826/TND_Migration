@@ -1,85 +1,11 @@
 # Create your views here.
-import pymssql
-import psycopg2
-import psycopg2.extras
 import pandas
 from rest_framework.views import APIView
 from django.http import JsonResponse
 
-from FACTORY.query import GetDBBasicInfoDataQuery, GetSampeDataQuery, GetColumnInfoDataQuery
-
-'''
-    DB 연결 객체
-'''
-class DBInfo:
-    def __init__(self, dbms, server, port, username, password, database):
-        self.dbms = dbms
-        self.server = server
-        self.port = port
-        self.username = username
-        self.password = password
-        self.database = database
-
-'''
-    DBMS 클래스
-'''
-class DBMS:
-    def __init__(self, dbms, server, port, username, password, database):
-        self.server = server
-        self.port = port
-        self.username = username
-        self.password = password
-        self.database = database
-        self.dbms = dbms
-        self.connectionObject = None
-
-    def Connect(self):
-        dbms = self.dbms
-
-        try:
-            if dbms.upper() == 'MSSQL':
-                self.connectionObject = pymssql.connect(server=self.server, port=self.port, user=self.username, password=self.password, database=self.database)
-            elif dbms.upper() == 'POSTGRESQL':
-                self.connectionObject = psycopg2.connect(host=self.server, port=self.port, user=self.username, password=self.password, dbname=self.database)
-        except:
-            return None
-
-        return self.connectionObject
-
-    def ExecuteQuery(self, query):
-        cursor = None
-        dbms = self.dbms
-
-        self.connectionObject = self.Connect()
-
-        try:
-            if dbms.upper() == 'MSSQL':
-                cursor = self.connectionObject.cursor(as_dict=True)
-            elif dbms.upper() == 'POSTGRESQL':
-                cursor = self.connectionObject.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            cursor.execute(query)
-        except:
-            return None
-
-        data = cursor.fetchall()
-
-        return data
-
-    def Close(self):
-        self.connectionObject.close()
-
-
-def GetDBInfo(self):
-    dbms = self.data['dbms']
-    server = self.data['server']
-    port = self.data['port']
-    username = self.data['username']
-    password = self.data['password']
-    database = self.data['database']
-
-    dbInfo = DBInfo(dbms, server, port, username, password, database)
-
-    return dbInfo
+from FACTORY.query import GetColumnInfoDataQuery_MSSQL, GetDBBasicInfoDataQuery_MSSQL, GetSampeDataQuery_MSSQL
+from FACTORY.classes import DBMS
+from FACTORY.method import GetDBInfo
 
 
 class TNDDBConnection(APIView):
@@ -106,7 +32,7 @@ class TNDDBConnection(APIView):
         result['Message'] = message
 
         # 연결 스키마 / 테이블 정보 가져오기
-        query = GetDBBasicInfoDataQuery()
+        query = GetDBBasicInfoDataQuery_MSSQL()
 
         try:
             datas = dbmsObj.ExecuteQuery(query)
@@ -148,7 +74,7 @@ class TNDDBTableData(APIView):
         schema = request.data['schema']
         table = request.data['table']
 
-        query = GetSampeDataQuery(schema, table)
+        query = GetSampeDataQuery_MSSQL(schema, table)
 
         try:
             datas = pandas.read_sql_query(sql=query, con=connectionObject)
@@ -179,7 +105,7 @@ class TNDColumnInfo(APIView):
         schema = request.data['schema']
         table = request.data['table']
 
-        query = GetColumnInfoDataQuery(schema, table)
+        query = GetColumnInfoDataQuery_MSSQL(schema, table)
 
 
         try:

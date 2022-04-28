@@ -2,7 +2,7 @@
 '''
     연결된 DB의 스키마 리스트 / 테이블 리스트 / 테이블의 데이터 건 수
 '''
-def GetDBBasicInfoDataQuery():
+def GetDBBasicInfoDataQuery_MSSQL():
     sql = '''
 SELECT TABLE_SCHEMA AS SCHEMA_LIST
      , TABLE_NAME
@@ -23,7 +23,7 @@ ORDER BY 1,2
 '''
     1000개의 데이터 가져오기
 '''
-def GetSampeDataQuery(schema, table):
+def GetSampeDataQuery_MSSQL(schema, table):
     sql = '''
 SELECT TOP 1000 * 
   FROM {schema}.{table} 
@@ -35,7 +35,7 @@ SELECT TOP 1000 *
 '''
     선택한 Table에 대한 Column 정보 가져오기
 '''
-def GetColumnInfoDataQuery(schema, table):
+def GetColumnInfoDataQuery_MSSQL(schema, table):
     sql = '''
 SELECT TAB.object_id
      , TAB.NAME AS TABLE_ID
