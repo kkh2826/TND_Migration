@@ -31,31 +31,32 @@ class DBMS:
         self.password = password
         self.database = database
         self.dbms = dbms
+        self.connectionObject = None
 
     def Connect(self):
         dbms = self.dbms
 
         try:
             if dbms.upper() == 'MSSQL':
-                self.conn = pymssql.connect(server=self.server, port=self.port, user=self.username, password=self.password, database=self.database)
+                self.connectionObject = pymssql.connect(server=self.server, port=self.port, user=self.username, password=self.password, database=self.database)
             elif dbms.upper() == 'POSTGRESQL':
-                self.conn = psycopg2.connect(host=self.server, port=self.port, user=self.username, password=self.password, dbname=self.database)
+                self.connectionObject = psycopg2.connect(host=self.server, port=self.port, user=self.username, password=self.password, dbname=self.database)
         except:
             return None
 
-        return self.conn
+        return self.connectionObject
 
     def ExecuteQuery(self, query):
         cursor = None
         dbms = self.dbms
 
-        connectionObject = self.Connect()
+        self.connectionObject = self.Connect()
 
         try:
             if dbms.upper() == 'MSSQL':
-                cursor = connectionObject.cursor(as_dict=True)
+                cursor = self.connectionObject.cursor(as_dict=True)
             elif dbms.upper() == 'POSTGRESQL':
-                cursor = connectionObject.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cursor = self.connectionObject.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cursor.execute(query)
         except:
             return None
@@ -63,6 +64,9 @@ class DBMS:
         data = cursor.fetchall()
 
         return data
+
+    def Close(self):
+        self.connectionObject.close()
 
 
 def GetDBInfo(self):
@@ -81,48 +85,36 @@ def GetDBInfo(self):
 class TNDDBConnection(APIView):
 
     def get(self, request):
-        result = {}
+        result = {
+            'SCHEMA_LIST': dict(),
+            'ConnectionSuccess': False,
+            'QueryState': True,
+            'Message': ''
+        }
         connectionObject = None
 
         dbInfo = GetDBInfo(request)
 
+        # DB 연결
         dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
         connectionObject = dbmsObj.Connect()
 
         connectionSuccess = True if connectionObject is not None else False
-        message = 'DB 연결 성공' if connectionObject is not None else 'DB 연결 실패'
+        message = 'DB 연결 실패' if connectionObject is None else ''
 
         result['ConnectionSuccess'] = connectionSuccess
         result['Message'] = message
 
-        print(result)
-
-        return JsonResponse(result)
-
-
-class TNDDBInfo(APIView):
-
-    def get(self, request):
-
-        result = {
-            'SCHEMA_LIST': dict(),
-            'ConnectionSuccess': False,
-            'Message': ''
-        }
-
-        dbInfo = GetDBInfo(request)
-
+        # 연결 스키마 / 테이블 정보 가져오기
         query = GetDBBasicInfoDataQuery()
 
         try:
-            dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
             datas = dbmsObj.ExecuteQuery(query)
         except:
             result['QueryState'] = False
             result['Message'] = 'DB 쿼리 실행 실패'
             
             return JsonResponse(result)
-
 
         for data in datas:
             schema = data['SCHEMA_LIST']
@@ -136,6 +128,9 @@ class TNDDBInfo(APIView):
             else:
                 if table not in result['SCHEMA_LIST'][schema]['TABLE_NAME'].keys():
                     result['SCHEMA_LIST'][schema]['TABLE_NAME'].setdefault(table, rowCnt)
+
+        # DB 연결 끊기
+        dbmsObj.Close()
 
         return JsonResponse(result)
 
