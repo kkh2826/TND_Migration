@@ -10,7 +10,7 @@ from FACTORY.method import GetDBInfo
 
 class TNDDBConnection(APIView):
 
-    def get(self, request):
+    def post(self, request):
         result = {
             'SCHEMA_LIST': dict(),
             'ConnectionSuccess': False,
@@ -63,7 +63,7 @@ class TNDDBConnection(APIView):
 
 class TNDDBTableData(APIView):
 
-    def get(self, request):
+    def post(self, request):
         result = {}
         
         dbInfo = GetDBInfo(request)
@@ -93,7 +93,7 @@ class TNDDBTableData(APIView):
 
 class TNDColumnInfo(APIView):
 
-    def get(self, request):
+    def post(self, request):
         result = {
             'object_id': dict(),
             'ConnectionSuccess': False,
