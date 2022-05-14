@@ -86,6 +86,14 @@ class TNDDBTableData(APIView):
 
         datas = datas.to_dict(orient='records')
 
+        # bytes Type Encoding Solved
+        for index in range(len(datas)):
+            for key, value in datas[index].items():
+                if type(value) is bytes:
+                    datas[index][key] = value.decode('utf-8', 'ignore')
+
+        print(datas)
+
         result['data'] = datas
 
         return JsonResponse(result)
