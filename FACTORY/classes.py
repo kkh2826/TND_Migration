@@ -29,14 +29,15 @@ class DBMS:
         self.dbms = dbms
         self.connectionObject = None
 
+
     def Connect(self):
         dbms = self.dbms
 
         try:
             if dbms.upper() == 'MSSQL':
-                self.connectionObject = pymssql.connect(server=self.server, port=self.port, user=self.username, password=self.password, database=self.database)
+                self.connectionObject = pymssql.connect(server=self.server, port=self.port, user=self.username, password=self.password, database=self.database, login_timeout=20, timeout=20)
             elif dbms.upper() == 'POSTGRESQL':
-                self.connectionObject = psycopg2.connect(host=self.server, port=self.port, user=self.username, password=self.password, dbname=self.database)
+                self.connectionObject = psycopg2.connect(host=self.server, port=self.port, user=self.username, password=self.password, dbname=self.database, connect_timeout=20)
         except:
             return None
 

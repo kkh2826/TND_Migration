@@ -14,7 +14,7 @@ class TNDDBConnection(APIView):
         result = {
             'SCHEMA_LIST': dict(),
             'ConnectionSuccess': False,
-            'QueryState': True,
+            'QueryState': False,
             'Message': ''
         }
         connectionObject = None
@@ -30,6 +30,9 @@ class TNDDBConnection(APIView):
 
         result['ConnectionSuccess'] = connectionSuccess
         result['Message'] = message
+
+        if connectionSuccess == False:
+            return JsonResponse(result)
 
         # 연결 스키마 / 테이블 정보 가져오기
         query = GetDBBasicInfoDataQuery_MSSQL()
