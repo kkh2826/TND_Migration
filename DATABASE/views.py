@@ -85,7 +85,7 @@ class TNDDBTableData(APIView):
             
             query_get_sample = GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas)
             datas = pandas.read_sql_query(sql=query_get_sample, con=connectionObject)
-            
+
         except:
             result['QueryState'] = False
             result['Message'] = 'DB 쿼리 실행 실패'
@@ -93,12 +93,6 @@ class TNDDBTableData(APIView):
             return JsonResponse(result)
 
         datas = datas.to_dict(orient='records')
-
-        # bytes Type Encoding Solved
-        # for index in range(len(datas)):
-        #     for key, value in datas[index].items():
-        #         if type(value) is bytes:
-        #             datas[index][key] = value.decode('utf-8', 'ignore')
 
         result['data'] = datas
 
@@ -130,8 +124,6 @@ class TNDColumnInfo(APIView):
             result['Message'] = 'DB 쿼리 실행 실패'
             
             return JsonResponse(result)
-
-        print(type(datas))
 
         for data in datas:
             objectId = data['OBJECT_ID']
