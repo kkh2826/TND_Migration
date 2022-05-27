@@ -1,3 +1,5 @@
+from FACTORY.method import MakeColumnQueryStatement
+
 
 '''
     연결된 DB의 스키마 리스트 / 테이블 리스트 / 테이블의 데이터 건 수
@@ -23,11 +25,13 @@ ORDER BY 1,2
 '''
     1000개의 데이터 가져오기
 '''
-def GetSampleDataQuery_MSSQL(schema, table):
+def GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas):
+    columnInfo = MakeColumnQueryStatement(columnInfoDatas)
     sql = '''
-SELECT TOP 1000 * 
+SELECT TOP 1000 {columnInfo}
   FROM {schema}.{table} 
-        '''.format(schema=schema, table=table)
+        '''.format(columnInfo=columnInfo, schema=schema, table=table)
+
 
     return sql
 

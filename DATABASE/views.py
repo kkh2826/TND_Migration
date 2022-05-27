@@ -77,10 +77,15 @@ class TNDDBTableData(APIView):
         schema = request.data['schema']
         table = request.data['table']
 
-        query = GetSampleDataQuery_MSSQL(schema, table)
+        # Column 정보를 이용해 BYTE_YN을 통해 Column을 Query에 직접 사용.
+        query_get_columninfo = GetColumnInfoDataQuery_MSSQL(schema, table)
 
         try:
-            datas = pandas.read_sql_query(sql=query, con=connectionObject)
+            columnInfoDatas = dbmsObj.ExecuteQuery(query_get_columninfo)
+            
+            query_get_sample = GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas)
+            datas = pandas.read_sql_query(sql=query_get_sample, con=connectionObject)
+            
         except:
             result['QueryState'] = False
             result['Message'] = 'DB 쿼리 실행 실패'
@@ -90,12 +95,10 @@ class TNDDBTableData(APIView):
         datas = datas.to_dict(orient='records')
 
         # bytes Type Encoding Solved
-        for index in range(len(datas)):
-            for key, value in datas[index].items():
-                if type(value) is bytes:
-                    datas[index][key] = value.decode('utf-8', 'ignore')
-
-        print(datas)
+        # for index in range(len(datas)):
+        #     for key, value in datas[index].items():
+        #         if type(value) is bytes:
+        #             datas[index][key] = value.decode('utf-8', 'ignore')
 
         result['data'] = datas
 
@@ -128,9 +131,10 @@ class TNDColumnInfo(APIView):
             
             return JsonResponse(result)
 
+        print(type(datas))
 
         for data in datas:
-            objectId = data['object_id']
+            objectId = data['OBJECT_ID']
             tableId = data['TABLE_ID']
             tableName = data['TABLE_NAME']
 
@@ -144,8 +148,8 @@ class TNDColumnInfo(APIView):
             columnInfo['PK'] = data['PK']
             columnInfo['FK'] = data['FK']
             columnInfo['UQ'] = data['UQ']
-            columnInfo['referenced_object'] = data['referenced_object']
-            columnInfo['referenced_column_name'] = data['referenced_column_name']
+            columnInfo['referenced_object'] = data['REFERENCED_OBJECT']
+            columnInfo['referenced_column_name'] = data['REFERENCED_COLUMN_NAME']
 
             if objectId not in result['object_id'].keys():
                 result['object_id'].setdefault(objectId, {'TABLE_ID': dict()})
