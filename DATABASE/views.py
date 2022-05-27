@@ -3,7 +3,7 @@ import pandas
 from rest_framework.views import APIView
 from django.http import JsonResponse
 
-from FACTORY.query import GetColumnInfoDataQuery_MSSQL, GetDBBasicInfoDataQuery_MSSQL, GetSampeDataQuery_MSSQL
+from FACTORY.query import GetColumnInfoDataQuery_MSSQL, GetDBBasicInfoDataQuery_MSSQL, GetSampleDataQuery_MSSQL
 from FACTORY.classes import DBMS
 from FACTORY.method import GetDBInfo
 
@@ -77,7 +77,7 @@ class TNDDBTableData(APIView):
         schema = request.data['schema']
         table = request.data['table']
 
-        query = GetSampeDataQuery_MSSQL(schema, table)
+        query = GetSampleDataQuery_MSSQL(schema, table)
 
         try:
             datas = pandas.read_sql_query(sql=query, con=connectionObject)
@@ -132,12 +132,12 @@ class TNDColumnInfo(APIView):
         for data in datas:
             objectId = data['object_id']
             tableId = data['TABLE_ID']
-            tableName = data['TABLE_NAME'].decode('utf-8')
+            tableName = data['TABLE_NAME']
 
             columnInfo = dict()
             
             columnInfo['COLUMN_ID'] = data['COLUMN_ID']
-            columnInfo['COLUMN_NAME'] = data['COLUMN_NAME'].decode('utf-8')
+            columnInfo['COLUMN_NAME'] = data['COLUMN_NAME']
             columnInfo['COLUMN_NO'] = data['COLUMN_NO']
             columnInfo['COL_TYPE'] = data['COL_TYPE']
             columnInfo['NULL_YN'] = data['NULL_YN']
