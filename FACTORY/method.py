@@ -13,12 +13,16 @@ def GetDBInfo(self):
     return dbInfo
 
 
-def MakeColumnQueryStatement(columnInfoDatas):
+def MakeColumnQueryStatement(dbms, columnInfoDatas):
     statementList = []
     for columnInfo in columnInfoDatas:
         columnId = columnInfo['COLUMN_ID']
+        print(columnId)
         if columnInfo['BYTE_YN'] == 'Y':
-            columnValue = f"{columnId} = " + "'0x' + " + f"CONVERT(VARCHAR(MAX), CAST({columnId} AS VARBINARY(MAX)), 2)"
+            if dbms == 'MSSQL':
+                columnValue = f"{columnId} = " + "'0x' + " + f"CONVERT(VARCHAR(MAX), CAST({columnId} AS VARBINARY(MAX)), 2)"
+            elif dbms == 'POSTGRESQL':
+                columnValue = f"{columnId} = " + "'\\x' || " + f"encode({columnId}, 'hex')" 
         else:
             columnValue = f"{columnId}"
         statementList.append(columnValue)        

@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from django.http import JsonResponse
 
 from FACTORY.query import GetColumnInfoDataQuery_MSSQL, GetDBBasicInfoDataQuery_MSSQL, GetSampleDataQuery_MSSQL
+from FACTORY.query import GetDBBasicInfoDataQuery_POSTGRESQL, GetSampleDataQuery_POSTGRESQL, GetColumnInfoDataQuery_POSTGRESQL
 from FACTORY.classes import DBMS
 from FACTORY.method import GetDBInfo
 
@@ -35,7 +36,10 @@ class TNDDBConnection(APIView):
             return JsonResponse(result)
 
         # 연결 스키마 / 테이블 정보 가져오기
-        query = GetDBBasicInfoDataQuery_MSSQL()
+        if dbmsObj.dbms.upper() == 'MSSQL':
+            query = GetDBBasicInfoDataQuery_MSSQL()
+        elif dbmsObj.dbms.upper() == 'POSTGRESQL':
+            query = GetDBBasicInfoDataQuery_POSTGRESQL()
 
         try:
             datas = dbmsObj.ExecuteQuery(query)
@@ -78,12 +82,20 @@ class TNDDBTableData(APIView):
         table = request.data['table']
 
         # Column 정보를 이용해 BYTE_YN을 통해 Column을 Query에 직접 사용.
-        query_get_columninfo = GetColumnInfoDataQuery_MSSQL(schema, table)
+        if dbmsObj.dbms.upper() == 'MSSQL':
+            query_get_columninfo = GetColumnInfoDataQuery_MSSQL(schema, table)
+        elif dbmsObj.dbms.upper() == 'POSTGRESQL':
+            query_get_columninfo = GetColumnInfoDataQuery_POSTGRESQL(schema, table)
 
         try:
             columnInfoDatas = dbmsObj.ExecuteQuery(query_get_columninfo)
             
-            query_get_sample = GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas)
+            if dbmsObj.dbms.upper() == 'MSSQL':
+                query_get_sample = GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas)
+            elif dbmsObj.dbms.upper() == 'POSTGRESQL':
+                query_get_sample = GetSampleDataQuery_POSTGRESQL(schema, table, columnInfoDatas)
+
+            print(query_get_sample)
             datas = pandas.read_sql_query(sql=query_get_sample, con=connectionObject)
 
         except:
@@ -113,8 +125,10 @@ class TNDColumnInfo(APIView):
         schema = request.data['schema']
         table = request.data['table']
 
-        query = GetColumnInfoDataQuery_MSSQL(schema, table)
-
+        if dbInfo.dbms.upper() == 'MSSQL':
+            query = GetColumnInfoDataQuery_MSSQL(schema, table)
+        elif dbInfo.dbms.upper() == 'POSTGRESQL':
+            query = GetColumnInfoDataQuery_POSTGRESQL(schema, table)
 
         try:
             dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)

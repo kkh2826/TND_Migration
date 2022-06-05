@@ -2,7 +2,7 @@ from FACTORY.method import MakeColumnQueryStatement
 
 
 '''
-    연결된 DB의 스키마 리스트 / 테이블 리스트 / 테이블의 데이터 건 수
+    연결된 DB의 스키마 리스트 / 테이블 리스트 / 테이블의 데이터 건 수 (MSSQL)
 '''
 def GetDBBasicInfoDataQuery_MSSQL():
     sql = '''
@@ -23,10 +23,10 @@ ORDER BY 1,2
     
 
 '''
-    1000개의 데이터 가져오기
+    1000개의 데이터 가져오기 (MSSQL)
 '''
 def GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas):
-    columnInfo = MakeColumnQueryStatement(columnInfoDatas)
+    columnInfo = MakeColumnQueryStatement('MSSQL', columnInfoDatas)
     sql = '''
 SELECT TOP 1000 {columnInfo}
   FROM {schema}.{table} 
@@ -37,10 +37,10 @@ SELECT TOP 1000 {columnInfo}
 
 
 '''
-    선택한 Table에 대한 Column 정보 가져오기
+    선택한 Table에 대한 Column 정보 가져오기 (MSSQL)
 '''
 def GetColumnInfoDataQuery_MSSQL(schema, table):
-    sql = '''
+    sql = ''' 
 SELECT CAST( TAB.object_id AS VARCHAR ) AS OBJECT_ID
      , CAST( TAB.NAME AS VARCHAR ) AS TABLE_ID 
 	 , CAST( TAB_COMMENT.VALUE AS VARCHAR )  AS TABLE_NAME
@@ -113,5 +113,122 @@ SELECT CAST( TAB.object_id AS VARCHAR ) AS OBJECT_ID
 					       AND COL.name = FK.constraint_column_name
  WHERE TAB.object_id = OBJECT_ID('{schema}.{table}')
         '''.format(schema=schema, table=table)
+
+    print(sql)
+
+    return sql
+
+
+
+'''
+    연결된 DB의 스키마 리스트 / 테이블 리스트 / 테이블의 데이터 건 수 (POSTGRESQL)
+'''
+def GetDBBasicInfoDataQuery_POSTGRESQL():
+    sql = '''
+SELECT A.TABLE_SCHEMA AS "SCHEMA_LIST"
+     , A.TABLE_NAME AS "TABLE_NAME"
+	 , B.N_LIVE_TUP AS "ROW_CNT"
+  FROM INFORMATION_SCHEMA.TABLES A
+  	   LEFT OUTER JOIN PG_STAT_ALL_TABLES B ON A.TABLE_SCHEMA = B.SCHEMANAME
+	   									   AND A.TABLE_NAME = B.RELNAME
+ WHERE TABLE_TYPE = 'BASE TABLE'
+ORDER BY 1,2  
+    '''
+
+    return sql
+
+
+'''
+    1000개의 데이터 가져오기 (POSTGRESQL)
+'''
+def GetSampleDataQuery_POSTGRESQL(schema, table, columnInfoDatas):
+    columnInfo = MakeColumnQueryStatement('POSTGRESQL', columnInfoDatas)
+    sql = '''
+SELECT {columnInfo}
+  FROM {schema}.{table}
+LIMIT 1000
+;
+    '''.format(columnInfo=columnInfo, schema=schema, table=table)
+
+    return sql
+
+
+'''
+    선택한 Table에 대한 Column 정보 가져오기 (POSTGRESQL)
+'''
+def GetColumnInfoDataQuery_POSTGRESQL(schema, table):
+    sql = '''
+SELECT CLS.OID AS "OBJECT_ID"
+	 , TAB.TABLE_NAME AS "TABLE_ID"
+	 , T_COMMENT.DESCRIPTION AS "TABLE_NAME"
+	 , COL.COLUMN_NAME AS "COLUMN_ID"
+	 , COL_COMMENT.DESCRIPTION AS "COLUMN_NAME"
+	 , COL.ORDINAL_POSITION AS "COLUMN_NO"
+	 , CASE WHEN COL.DATA_TYPE LIKE '%character%' THEN COL.DATA_TYPE || '(' || COL.CHARACTER_MAXIMUM_LENGTH || ')'
+	   		WHEN COL.DATA_TYPE LIKE '%time%' THEN COL.DATA_TYPE
+			WHEN COL.DATA_TYPE IN ('numeric') THEN COL.DATA_TYPE || '(' || COL.NUMERIC_PRECISION || ',' || COL.NUMERIC_SCALE || ')'
+			ELSE COL.DATA_TYPE
+	   END AS "COL_TYPE"
+	 , CASE WHEN COL.IS_NULLABLE = 'YES' THEN 'NULL'
+	        ELSE 'NOT NULL' 
+       END AS "NULL_YN"
+	 , COALESCE(PK.PK_COL, '') AS "PK"
+	 , COALESCE(FK.FK_COL, '') AS "FK"
+	 , COALESCE(UQ.UQ_COL, '') AS "UQ"
+	 , FK.PARENT_TABLE_NAME AS "REFERENCED_OBJECT"
+	 , FK.PARENT_COLUMN_NAME AS "REFERENCED_COLUMN_NAME"
+	 , CASE WHEN COL.DATA_TYPE = 'bytea' THEN 'Y'
+	 		ELSE 'N'
+	   END AS "BYTE_YN"
+  FROM INFORMATION_SCHEMA.TABLES TAB
+  		INNER JOIN PG_CLASS CLS ON CLS.RELNAME = TAB.TABLE_NAME
+		INNER JOIN INFORMATION_SCHEMA.COLUMNS COL ON COL.TABLE_CATALOG = TAB.TABLE_CATALOG
+												  AND COL.TABLE_SCHEMA = TAB.TABLE_SCHEMA
+												  AND COL.TABLE_NAME = TAB.TABLE_NAME
+		LEFT OUTER JOIN PG_DESCRIPTION T_COMMENT ON T_COMMENT.OBJOID = CLS.OID
+												 AND T_COMMENT.OBJSUBID = 0	-- 테이블COMMENT
+		LEFT OUTER JOIN (SELECT Z.OBJOID, Z.OBJSUBID, Z.DESCRIPTION, Y.ATTNAME
+						   FROM PG_DESCRIPTION Z
+						 		INNER JOIN PG_ATTRIBUTE Y ON Z.OBJOID = Y.ATTRELID
+														 AND Z.OBJSUBID = Y.ATTNUM
+						 								 AND Z.OBJSUBID != 0 -- 컬럼COMMENT
+						 								 AND Y.ATTNUM >= 1) COL_COMMENT ON COL_COMMENT.OBJOID = CLS.OID
+														 					 		    AND COL_COMMENT.ATTNAME = COL.COLUMN_NAME
+		LEFT OUTER JOIN (SELECT Z.TABLE_CATALOG, Z.TABLE_SCHEMA, Z.TABLE_NAME, Z.CONSTRAINT_NAME, Y.COLUMN_NAME, 'Y' AS PK_COL
+						   FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS Z
+						 		LEFT OUTER JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE Y ON Z.CONSTRAINT_TYPE = 'PRIMARY KEY'
+						 																	AND Z.TABLE_CATALOG = Y.TABLE_CATALOG
+						 																	AND Z.TABLE_SCHEMA = Y.TABLE_SCHEMA
+						 																	AND Z.TABLE_NAME = Y.TABLE_NAME
+						 																	AND Z.CONSTRAINT_NAME = Y.CONSTRAINT_NAME
+						) PK ON PK.TABLE_CATALOG = COL.TABLE_CATALOG
+						    AND PK.TABLE_SCHEMA = COL.TABLE_SCHEMA
+							AND PK.TABLE_NAME = COL.TABLE_NAME
+							AND PK.COLUMN_NAME = COL.COLUMN_NAME
+		LEFT OUTER JOIN (SELECT Z.TABLE_CATALOG, Z.TABLE_SCHEMA, Z.TABLE_NAME, Z.CONSTRAINT_NAME, Y.COLUMN_NAME
+						      , X.TABLE_NAME AS PARENT_TABLE_NAME, X.COLUMN_NAME AS PARENT_COLUMN_NAME
+						 	  , 'Y' AS FK_COL
+						  FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS Z
+								INNER JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE Y ON Y.CONSTRAINT_NAME = Z.CONSTRAINT_NAME	   
+						 		INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE X ON X.CONSTRAINT_NAME = Z.CONSTRAINT_NAME
+						 WHERE Z.CONSTRAINT_TYPE = 'FOREIGN KEY') FK ON FK.TABLE_CATALOG = COL.TABLE_CATALOG
+																	 AND FK.TABLE_SCHEMA = COL.TABLE_SCHEMA
+																	 AND FK.TABLE_NAME = COL.TABLE_NAME
+																	 AND FK.COLUMN_NAME = COL.COLUMN_NAME
+		LEFT OUTER JOIN (SELECT Z.TABLE_CATALOG, Z.TABLE_SCHEMA, Z.TABLE_NAME, Z.CONSTRAINT_NAME, Y.COLUMN_NAME, 'Y' AS UQ_COL
+						   FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS Z
+						 		LEFT OUTER JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE Y ON Z.CONSTRAINT_TYPE = 'UNIQUE'
+						 																	AND Z.TABLE_CATALOG = Y.TABLE_CATALOG
+						 																	AND Z.TABLE_SCHEMA = Y.TABLE_SCHEMA
+						 																	AND Z.TABLE_NAME = Y.TABLE_NAME
+						 																	AND Z.CONSTRAINT_NAME = Y.CONSTRAINT_NAME
+						) UQ ON UQ.TABLE_CATALOG = COL.TABLE_CATALOG
+						    AND UQ.TABLE_SCHEMA = COL.TABLE_SCHEMA
+							AND UQ.TABLE_NAME = COL.TABLE_NAME
+							AND UQ.COLUMN_NAME = COL.COLUMN_NAME
+ WHERE TAB.TABLE_TYPE = 'BASE TABLE'
+   AND TAB.TABLE_SCHEMA || '.' || TAB.TABLE_NAME = LOWER('{schema}.{table}')
+ORDER BY CLS.OID, COL.ORDINAL_POSITION  
+    '''.format(schema=schema, table=table)
 
     return sql
