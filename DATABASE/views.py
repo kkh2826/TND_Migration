@@ -3,10 +3,8 @@ import pandas
 from rest_framework.views import APIView
 from django.http import JsonResponse
 
-from FACTORY.query import GetColumnInfoDataQuery_MSSQL, GetDBBasicInfoDataQuery_MSSQL, GetSampleDataQuery_MSSQL
-from FACTORY.query import GetDBBasicInfoDataQuery_POSTGRESQL, GetSampleDataQuery_POSTGRESQL, GetColumnInfoDataQuery_POSTGRESQL
 from FACTORY.classes import DBMS
-from FACTORY.method import GetDBInfo
+from FACTORY.method import GetDBInfo, get_db_basicinfo_data_query, get_columninfo_data_query, get_sample_data_query
 
 
 class TNDDBConnection(APIView):
@@ -36,10 +34,7 @@ class TNDDBConnection(APIView):
             return JsonResponse(result)
 
         # 연결 스키마 / 테이블 정보 가져오기
-        if dbmsObj.dbms.upper() == 'MSSQL':
-            query = GetDBBasicInfoDataQuery_MSSQL()
-        elif dbmsObj.dbms.upper() == 'POSTGRESQL':
-            query = GetDBBasicInfoDataQuery_POSTGRESQL()
+        query = get_db_basicinfo_data_query(dbInfo.dbms)
 
         try:
             datas = dbmsObj.ExecuteQuery(query)
@@ -82,22 +77,12 @@ class TNDDBTableData(APIView):
         table = request.data['table']
 
         # Column 정보를 이용해 BYTE_YN을 통해 Column을 Query에 직접 사용.
-        if dbmsObj.dbms.upper() == 'MSSQL':
-            query_get_columninfo = GetColumnInfoDataQuery_MSSQL(schema, table)
-        elif dbmsObj.dbms.upper() == 'POSTGRESQL':
-            query_get_columninfo = GetColumnInfoDataQuery_POSTGRESQL(schema, table)
+        query_get_columninfo = get_columninfo_data_query(dbInfo.dbms, schema, table)
 
         try:
             columnInfoDatas = dbmsObj.ExecuteQuery(query_get_columninfo)
-            
-            if dbmsObj.dbms.upper() == 'MSSQL':
-                query_get_sample = GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas)
-            elif dbmsObj.dbms.upper() == 'POSTGRESQL':
-                query_get_sample = GetSampleDataQuery_POSTGRESQL(schema, table, columnInfoDatas)
-
-            print(query_get_sample)
+            query_get_sample = get_sample_data_query(dbInfo.dbms, schema, table, columnInfoDatas)
             datas = pandas.read_sql_query(sql=query_get_sample, con=connectionObject)
-
         except:
             result['QueryState'] = False
             result['Message'] = 'DB 쿼리 실행 실패'
@@ -125,10 +110,7 @@ class TNDColumnInfo(APIView):
         schema = request.data['schema']
         table = request.data['table']
 
-        if dbInfo.dbms.upper() == 'MSSQL':
-            query = GetColumnInfoDataQuery_MSSQL(schema, table)
-        elif dbInfo.dbms.upper() == 'POSTGRESQL':
-            query = GetColumnInfoDataQuery_POSTGRESQL(schema, table)
+        query = get_columninfo_data_query(dbInfo.dbms, schema, table)
 
         try:
             dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
