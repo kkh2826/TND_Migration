@@ -1,4 +1,4 @@
-from FACTORY.method import MakeColumnQueryStatement
+from FACTORY.query.querycook import MakeColumnQueryStatement as MCQS
 
 
 '''
@@ -23,7 +23,7 @@ ORDER BY 1,2
     1000개의 데이터 가져오기 (POSTGRESQL)
 '''
 def GetSampleDataQuery_POSTGRESQL(schema, table, columnInfoDatas):
-    columnInfo = MakeColumnQueryStatement('POSTGRESQL', columnInfoDatas)
+    columnInfo = MCQS('POSTGRESQL', columnInfoDatas)
     sql = '''
 SELECT {columnInfo}
   FROM {schema}.{table}

@@ -36,21 +36,3 @@ def get_sample_data_query(dbms, schema, table, columnInfoDatas):
         return GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas)
     elif dbms.upper() == 'POSTGRESQL':
         return GetSampleDataQuery_POSTGRESQL(schema, table, columnInfoDatas)
-
-
-def MakeColumnQueryStatement(dbms, columnInfoDatas):
-    statementList = []
-    for columnInfo in columnInfoDatas:
-        columnId = columnInfo['COLUMN_ID']
-        if columnInfo['BYTE_YN'] == 'Y':
-            if dbms == 'MSSQL':
-                columnValue = f"{columnId} = " + "'0x' + " + f"CONVERT(VARCHAR(MAX), CAST({columnId} AS VARBINARY(MAX)), 2)"
-            elif dbms == 'POSTGRESQL':
-                columnValue = f"{columnId} = " + "'\\x' || " + f"encode({columnId}, 'hex')" 
-        else:
-            columnValue = f"{columnId}"
-        statementList.append(columnValue)        
-
-    columnInfo = ', '.join(statementList)
-
-    return columnInfo

@@ -1,4 +1,4 @@
-from FACTORY.method import MakeColumnQueryStatement
+from FACTORY.query.querycook import MakeColumnQueryStatement as MCQS
 
 
 '''
@@ -26,7 +26,7 @@ ORDER BY 1,2
     1000개의 데이터 가져오기 (MSSQL)
 '''
 def GetSampleDataQuery_MSSQL(schema, table, columnInfoDatas):
-    columnInfo = MakeColumnQueryStatement('MSSQL', columnInfoDatas)
+    columnInfo = MCQS('MSSQL', columnInfoDatas)
     sql = '''
 SELECT TOP 1000 {columnInfo}
   FROM {schema}.{table} 
