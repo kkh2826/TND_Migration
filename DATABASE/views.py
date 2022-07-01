@@ -115,6 +115,7 @@ class TNDColumnInfo(APIView):
         try:
             dbmsObj = DBMS(dbInfo.dbms, dbInfo.server, dbInfo.port, dbInfo.username, dbInfo.password, dbInfo.database)
             datas = dbmsObj.ExecuteQuery(query)
+            result['ConnectionSuccess'] = True
         except:
             result['QueryState'] = False
             result['Message'] = 'DB 쿼리 실행 실패'
