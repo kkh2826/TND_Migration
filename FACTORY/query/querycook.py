@@ -8,7 +8,7 @@ def MakeColumnQueryStatement(dbms, columnInfoDatas):
             elif dbms == 'POSTGRESQL':
                 columnValue = f"{columnId} = " + "'\\x' || " + f"encode({columnId}, 'hex')" 
         else:
-            columnValue = f"{columnId}"
+            columnValue = f"[{columnId}]"
         statementList.append(columnValue)        
 
     columnInfo = ', '.join(statementList)

@@ -82,6 +82,7 @@ class TNDDBTableData(APIView):
         try:
             columnInfoDatas = dbmsObj.ExecuteQuery(query_get_columninfo)
             query_get_sample = get_sample_data_query(dbInfo.dbms, schema, table, columnInfoDatas)
+            print(query_get_sample)
             datas = pandas.read_sql_query(sql=query_get_sample, con=connectionObject)
         except:
             result['QueryState'] = False
